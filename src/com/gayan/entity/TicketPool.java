@@ -18,4 +18,12 @@ public interface TicketPool {
             String location,
             double price);
     void cancelTicket(Ticket ticket);
+    void updateTicket(
+            long ticketId,
+            double newPrice,
+            String newLocation,
+            String newEventName
+    );
+    List<Ticket> getAvailableTickets();
+    Optional<Ticket> getRandomAvailableTicket();
 }
