@@ -41,7 +41,6 @@ public class Consumer implements Runnable{
             try{
                 Optional<Ticket> optionalTicket = ticketPool.purchaseTicket();
 
-                //TODO: Uncomment this line to simulate the realworld cancelation behavior
                 optionalTicket.ifPresent(this::handleTicket);
 
                 Thread.sleep(purchaseRateAtMillis);
