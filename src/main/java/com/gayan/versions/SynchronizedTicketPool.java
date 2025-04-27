@@ -36,15 +36,16 @@ public class SynchronizedTicketPool implements TicketPool {
 
         while ((tickets.size() + soldTickets.size()) >= capacity) {
             long elapsed = System.currentTimeMillis() - startTime;
+            long waitTime = TIME_OUT - elapsed;
 
-            if (elapsed >= TIME_OUT) {
+            if (waitTime <= 0) {
                 // Waited too long, fail
-                System.out.println("Waiting too long exit");
+                System.out.println(Thread.currentThread().getName() + " waited too long to add ticket. Exiting...");
                 return false;
             }
 
             try {
-                wait(TIME_OUT - elapsed);
+                wait(waitTime);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 return false;

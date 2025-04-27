@@ -9,10 +9,14 @@ import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class BlockingQueueTicketPool implements TicketPool {
+
+    private final int TIME_OUT = 5000;
+
     private final BlockingQueue<Ticket> tickets;
     private final int capacity;
     private final AtomicLong ticketIdCounter;
@@ -25,22 +29,18 @@ public class BlockingQueueTicketPool implements TicketPool {
     }
 
     @Override
-    public synchronized boolean addTicket(Ticket ticket) {
-        if (tickets.size() >= capacity) {
-            return false; // Pool full -> signal producer to stop
-        }
-
+    public boolean addTicket(Ticket ticket) {
         try {
-            tickets.put(ticket);
-
+            boolean success = tickets.offer(ticket, TIME_OUT, TimeUnit.MILLISECONDS);
+            if (!success) {
+                System.out.println(Thread.currentThread().getName() + " could not add ticket - pool full after waiting.");
+            }
+            return success;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            System.out.println("Thread interrupted while adding ticket" + e.getLocalizedMessage());
+            System.out.println(Thread.currentThread().getName() + " was interrupted while adding ticket.");
             return false;
         }
-
-        notifyAll();
-        return true;
     }
 
 //    @Override

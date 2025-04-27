@@ -4,12 +4,15 @@ import com.gayan.entities.Ticket;
 import com.gayan.entities.TicketPool;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class ReentrantLockTicketPool implements TicketPool {
+    private final int TIME_OUT = 5000;
+
     private final Queue<Ticket> tickets;
     private final int capacity;
     private final AtomicLong ticketIdCounter;
@@ -27,25 +30,43 @@ public class ReentrantLockTicketPool implements TicketPool {
     }
 
     @Override
-    public synchronized boolean addTicket(Ticket ticket) {
+    public boolean addTicket(Ticket ticket) {
+        boolean added = false;
         lock.lock();
-        if (tickets.size() >= capacity) {
-            return false; // Pool full -> signal producer to stop
-        }
-
         try {
+            long startTime = System.currentTimeMillis();
+            long remaining = TIME_OUT;
+
+            while (tickets.size() >= capacity) {
+                if (remaining <= 0) {
+                    System.out.println(Thread.currentThread().getName() + " timed out trying to add ticket.");
+                    return false;
+                }
+
+                try {
+                    if (!notFull.await(remaining, TimeUnit.MILLISECONDS)) {
+                        // Timeout occurred
+                        System.out.println(Thread.currentThread().getName() + " waited but pool is still full. Exiting addTicket.");
+                        return false;
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    System.out.println(Thread.currentThread().getName() + " was interrupted while adding ticket.");
+                    return false;
+                }
+                long elapsed = System.currentTimeMillis() - startTime;
+                remaining = TIME_OUT - elapsed;
+            }
+
             tickets.offer(ticket);
-            notEmpty.signalAll();
-        } catch (Exception e) {
-            Thread.currentThread().interrupt();
-            System.out.println("Thread interrupted while adding ticket" + e.getLocalizedMessage());
-            return false;
-        }finally {
+            added = true;
+            notEmpty.signalAll(); // wake up consumers waiting for tickets
+
+        } finally {
             lock.unlock();
         }
 
-        notifyAll();
-        return true;
+        return added;
     }
 
 //    @Override
