@@ -21,8 +21,7 @@ public class Consumer implements Runnable{
     private static final ThreadLocalRandom random = ThreadLocalRandom.current();
     private final boolean simulateCancel; //configuration
 
-    int emptyTries = 0;
-    final int maxEmptyTries = 3;
+
 
     private volatile boolean running = true; //Dynamically remove the consumer
 
@@ -44,21 +43,24 @@ public class Consumer implements Runnable{
 
     @Override
     public void run() {
+        int retryCount = 0;
+        final int maxEmptyTries = 3;
 
         while(running && counter < purchaseLimit) {
             try{
 
                 Optional<Ticket> optionalTicket = ticketPool.purchaseTicket();
                 if (optionalTicket.isEmpty()) {
-                    emptyTries++;
-                    if(emptyTries > maxEmptyTries) {
+                    retryCount++;
+                    if(retryCount >= maxEmptyTries) {
+                        retryCount = 0;
                         running = false;
                     }else{
                         Thread.sleep(500);
                     }
                      // gracefully stop
                 }
-                emptyTries = 0;
+
                 optionalTicket.ifPresent(this::handleTicket);
 
                 Thread.sleep(purchaseRateAtMillis);
