@@ -55,37 +55,35 @@ public class Consumer implements Runnable{
     }
 
     private void handleTicket(Ticket ticket) {
+        try{
+            consumerTicketCount.computeIfAbsent(Thread.currentThread().getName(), k -> new AtomicInteger(0)).incrementAndGet();
+            counter++;
+            System.out.println(Thread.currentThread().getName() +
+                    " purchased ticket: " + ticket.getTicketId());
 
-           try{
-               consumerTicketCount.computeIfAbsent(Thread.currentThread().getName(), k -> new AtomicInteger(0)).incrementAndGet();
-               counter++;
-               System.out.println(Thread.currentThread().getName() +
-                       " purchased ticket: " + ticket.getTicketId());
+            //Simulate real world cancellation behavior
+            if(simulateCancel) {
+                // (Optional) Hold ticket for a random short period (simulate "using" it)
+                Thread.sleep(ThreadLocalRandom.current().nextInt(500) + 200);
 
-               //Simulate real world cancellation behavior
-               if(simulateCancel) {
-                   // (Optional) Hold ticket for a random short period (simulate "using" it)
-                   Thread.sleep(ThreadLocalRandom.current().nextInt(500) + 200);
+                boolean willCancel = random.nextInt(100) < 10;
+                if (willCancel) {
+                    ticketPool.cancelTicket(ticket);
+                    counter--;
+                    System.out.println(Thread.currentThread().getName() +
+                            " cancelled the ticket:" + ticket.getTicketId());
+                } else {
+                    counter++;
+                    System.out.println(Thread.currentThread().getName() +
+                            " Kept the ticket: " + ticket.getTicketId());
+                }
+            }
 
-                   boolean willCancel = random.nextInt(100) < 10;
-                   if (willCancel) {
-                       ticketPool.cancelTicket(ticket);
-                       counter--;
-                       System.out.println(Thread.currentThread().getName() +
-                               " cancelled the ticket:" + ticket.getTicketId());
-                   } else {
-                       counter++;
-                       System.out.println(Thread.currentThread().getName() +
-                               " Kept the ticket: " + ticket.getTicketId());
-                   }
-               }
-
-           }catch (InterruptedException e){
-               System.out.println(Thread.currentThread().getName() +
-                       " was interrupted during ticket handling.");
-               Thread.currentThread().interrupt();
-           }
-
+        }catch (InterruptedException e){
+            System.out.println(Thread.currentThread().getName() +
+                    " was interrupted during ticket handling.");
+            Thread.currentThread().interrupt();
+        }
     }
 
     //Dynamically Stop the consumer (Because the coursework asked to remove dynamically)
