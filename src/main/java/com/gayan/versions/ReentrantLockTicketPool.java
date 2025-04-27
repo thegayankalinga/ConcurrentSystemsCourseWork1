@@ -27,21 +27,43 @@ public class ReentrantLockTicketPool implements TicketPool {
     }
 
     @Override
-    public void addTicket(Ticket ticket) {
+    public synchronized boolean addTicket(Ticket ticket) {
         lock.lock();
+        if (tickets.size() >= capacity) {
+            return false; // Pool full -> signal producer to stop
+        }
+
         try {
-            while (tickets.size() == capacity) {
-                notFull.await();
-            }
             tickets.offer(ticket);
             notEmpty.signalAll();
-        } catch (InterruptedException e) {
+        } catch (Exception e) {
             Thread.currentThread().interrupt();
-            throw new RuntimeException(e);
-        } finally {
+            System.out.println("Thread interrupted while adding ticket" + e.getLocalizedMessage());
+            return false;
+        }finally {
             lock.unlock();
         }
+
+        notifyAll();
+        return true;
     }
+
+//    @Override
+//    public void addTicket(Ticket ticket) {
+//        lock.lock();
+//        try {
+//            while (tickets.size() == capacity) {
+//                notFull.await();
+//            }
+//            tickets.offer(ticket);
+//            notEmpty.signalAll();
+//        } catch (InterruptedException e) {
+//            Thread.currentThread().interrupt();
+//            throw new RuntimeException(e);
+//        } finally {
+//            lock.unlock();
+//        }
+//    }
 
     @Override
     public Optional<Ticket> purchaseTicket() {
@@ -73,7 +95,7 @@ public class ReentrantLockTicketPool implements TicketPool {
         try {
             if (ticket != null) {
                 ticket.setSold(false);
-                tickets.offer(ticket);
+                //tickets.offer(ticket);
                 notEmpty.signalAll();
             }
         } finally {
@@ -124,6 +146,16 @@ public class ReentrantLockTicketPool implements TicketPool {
         } finally {
             lock.unlock();
         }
+    }
+
+    public int getAllTicketsCount() {
+        lock.lock();
+        try{
+            return tickets.size();
+        }finally {
+            lock.unlock();
+        }
+
     }
 
     @Override

@@ -25,14 +25,33 @@ public class BlockingQueueTicketPool implements TicketPool {
     }
 
     @Override
-    public void addTicket(Ticket ticket) {
+    public synchronized boolean addTicket(Ticket ticket) {
+        if (tickets.size() >= capacity) {
+            return false; // Pool full -> signal producer to stop
+        }
+
         try {
-            tickets.put(ticket); // blocks if full
+            tickets.put(ticket);
+
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new RuntimeException("Thread interrupted while adding ticket", e);
+            System.out.println("Thread interrupted while adding ticket" + e.getLocalizedMessage());
+            return false;
         }
+
+        notifyAll();
+        return true;
     }
+
+//    @Override
+//    public void addTicket(Ticket ticket) {
+//        try {
+//            tickets.put(ticket); // blocks if full
+//        } catch (InterruptedException e) {
+//            Thread.currentThread().interrupt();
+//            throw new RuntimeException("Thread interrupted while adding ticket", e);
+//        }
+//    }
 
     @Override
     public Optional<Ticket> purchaseTicket() {
@@ -66,6 +85,7 @@ public class BlockingQueueTicketPool implements TicketPool {
             try {
                 // Only mark as unsold;
                 ticket.setSold(false);
+
             } finally {
                 lock.writeLock().unlock();
             }
@@ -111,6 +131,16 @@ public class BlockingQueueTicketPool implements TicketPool {
         } finally {
             lock.readLock().unlock();
         }
+    }
+
+    public int getAllTicketsCount() {
+        lock.readLock().lock();
+        try{
+            return tickets.size();
+        }finally {
+            lock.readLock().unlock();
+        }
+
     }
 
     @Override
@@ -161,7 +191,7 @@ public class BlockingQueueTicketPool implements TicketPool {
                     lock.writeLock().lock();
                     try {
                         if (!ticket.isSold()) { // Double-check inside lock
-                            ticket.setSold(true);
+                            //ticket.setSold(true);
                             return Optional.of(ticket);
                         }
                     } finally {

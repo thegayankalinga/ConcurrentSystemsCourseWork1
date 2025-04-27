@@ -1,21 +1,17 @@
 package com.gayan;
 
-
-import utilz.SimulationManager;
-import utilz.TerminalColorConstant;
-
 //TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
 // click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
 public class Main {
     public static void main(String[] args) {
 
-        System.out.println(TerminalColorConstant.GREEN_BOLD +
+        System.out.println(utilz.TerminalColorConstant.GREEN_BOLD +
                 "\n===============================================" +
                 "\n    Ticket System Concurrent Simulator" +
                 "\n===============================================\n" +
-                TerminalColorConstant.RESET);
+                utilz.TerminalColorConstant.RESET);
 
-        SimulationManager manager = new SimulationManager();
+        utilz.SimulationManager manager = new utilz.SimulationManager();
         manager.startSimulation();
     }
 }

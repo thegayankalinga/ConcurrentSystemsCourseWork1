@@ -43,13 +43,16 @@ public class Producer implements Runnable {
 
     @Override
     public void run() {
-        if (ticketCounter >= maxNoOfTickets){
-            System.out.println("Queue is full, cannot add tickets waiting....");
-        }
+//        if (ticketCounter >= maxNoOfTickets){
+//            System.out.println("Queue is full, cannot add tickets waiting....");
+//        }
         while(running && ticketCounter < maxNoOfTickets) {
             try{
                 Ticket ticket = ticketPool.createTicket(eventName, vendorName, location, price);
-                ticketPool.addTicket(ticket);
+                boolean result = ticketPool.addTicket(ticket);
+                if(!result) {
+                    running = false;
+                }
                 ticketCounter++;
                 vendorTicketCount.computeIfAbsent(vendorName, k -> new AtomicInteger(0)).incrementAndGet();
 
