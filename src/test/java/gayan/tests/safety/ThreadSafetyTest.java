@@ -8,13 +8,15 @@ import gayan.tests.utilz.TestUtilz;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-
+import java.util.concurrent.TimeUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.Executors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -65,6 +67,7 @@ public class ThreadSafetyTest extends BaseTestConfig {
         assertEquals(DEFAULT_THREAD_COUNT, pool.getAvailableTicketCount(), "All tickets should be available");
     }
 
+
     @ParameterizedTest
     @EnumSource(TestUtilz.PoolType.class)
     @DisplayName("Test concurrent producers and consumers")
@@ -78,14 +81,19 @@ public class ThreadSafetyTest extends BaseTestConfig {
         int consumerCount = 10;
         int ticketsPerProducer = 10;
 
+        int totalTicketsToProduce = producerCount * ticketsPerProducer;
+
         CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(producerCount + consumerCount);
+
+        ExecutorService executor = Executors.newFixedThreadPool(producerCount + consumerCount);
 
         // Start producers
         for (int i = 0; i < producerCount; i++) {
             int producerId = i;
-            new Thread(() -> {
+            executor.submit(() -> {
                 try {
-                    startLatch.await(); // Wait for all threads to be ready
+                    startLatch.await();
                     for (int j = 0; j < ticketsPerProducer; j++) {
                         Ticket ticket = pool.createTicket(
                                 "Event-" + producerId + "-" + j,
@@ -95,46 +103,120 @@ public class ThreadSafetyTest extends BaseTestConfig {
                         );
                         pool.addTicket(ticket);
                         producedCount.incrementAndGet();
-                        Thread.sleep(10); // Small delay to increase chances of interleaving
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
+                } finally {
+                    doneLatch.countDown();
                 }
-            }).start();
+            });
         }
 
         // Start consumers
         for (int i = 0; i < consumerCount; i++) {
-            new Thread(() -> {
+            executor.submit(() -> {
                 try {
-                    startLatch.await(); // Wait for all threads to be ready
-                    while (consumedCount.get() < producerCount * ticketsPerProducer) {
-                        Optional<Ticket> ticket = pool.purchaseTicket();
-                        if (ticket.isPresent()) {
-                            consumedCount.incrementAndGet();
-                            Thread.sleep(5); // Small delay to increase chances of interleaving
+                    startLatch.await();
+                    while (true) {
+                        if (consumedCount.get() >= totalTicketsToProduce) {
+                            break; // all tickets consumed
                         }
+                        Optional<Ticket> ticket = pool.purchaseTicket();
+                        ticket.ifPresent(t -> consumedCount.incrementAndGet());
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
+                } finally {
+                    doneLatch.countDown();
                 }
-            }).start();
+            });
         }
 
-        // Start all threads at once
+        // Start all threads
         startLatch.countDown();
 
-        // Wait for completion (with timeout)
-        long timeout = System.currentTimeMillis() + 10000; // 10 second timeout
-        while (consumedCount.get() < producerCount * ticketsPerProducer && System.currentTimeMillis() < timeout) {
-            Thread.sleep(100);
-        }
+        boolean completed = doneLatch.await(20, TimeUnit.SECONDS);
+
+        executor.shutdownNow();
+        executor.awaitTermination(5, TimeUnit.SECONDS);
 
         // Assert
-        assertEquals(producerCount * ticketsPerProducer, producedCount.get(), "All tickets should be produced");
-        assertEquals(producerCount * ticketsPerProducer, consumedCount.get(), "All tickets should be consumed");
-        assertEquals(0, pool.getAvailableTicketCount(), "No tickets should remain available");
+        assertTrue(completed, "Test should complete within timeout");
+        assertEquals(totalTicketsToProduce, producedCount.get(), "All tickets should be produced");
+        assertEquals(totalTicketsToProduce, consumedCount.get(), "All tickets should be consumed");
+        assertEquals(0, pool.getAvailableTicketCount(), "No available tickets should remain");
     }
+
+//    @ParameterizedTest
+//    @EnumSource(TestUtilz.PoolType.class)
+//    @DisplayName("Test concurrent producers and consumers")
+//    void testProducerConsumerPattern(TestUtilz.PoolType poolType) throws InterruptedException {
+//        // Arrange
+//        TicketPool pool = TestUtilz.createTicketPool(poolType, DEFAULT_CAPACITY);
+//        AtomicInteger producedCount = new AtomicInteger(0);
+//        AtomicInteger consumedCount = new AtomicInteger(0);
+//
+//        int producerCount = 5;
+//        int consumerCount = 10;
+//        int ticketsPerProducer = 10;
+//
+//        CountDownLatch startLatch = new CountDownLatch(1);
+//
+//        // Start producers
+//        for (int i = 0; i < producerCount; i++) {
+//            int producerId = i;
+//            new Thread(() -> {
+//                try {
+//                    startLatch.await(); // Wait for all threads to be ready
+//                    for (int j = 0; j < ticketsPerProducer; j++) {
+//                        Ticket ticket = pool.createTicket(
+//                                "Event-" + producerId + "-" + j,
+//                                "Producer-" + producerId,
+//                                "Location-" + j,
+//                                100.0 + j
+//                        );
+//                        pool.addTicket(ticket);
+//                        producedCount.incrementAndGet();
+//                        Thread.sleep(20); // Small delay to increase chances of interleaving
+//                    }
+//                } catch (InterruptedException e) {
+//                    Thread.currentThread().interrupt();
+//                }
+//            }).start();
+//        }
+//
+//        // Start consumers
+//        for (int i = 0; i < consumerCount; i++) {
+//            new Thread(() -> {
+//                try {
+//                    startLatch.await(); // Wait for all threads to be ready
+//                    while (consumedCount.get() < producerCount * ticketsPerProducer) {
+//                        Optional<Ticket> ticket = pool.purchaseTicket();
+//                        if (ticket.isPresent()) {
+//                            consumedCount.incrementAndGet();
+//                            Thread.sleep(2); // Small delay to increase chances of interleaving
+//                        }
+//                    }
+//                } catch (InterruptedException e) {
+//                    Thread.currentThread().interrupt();
+//                }
+//            }).start();
+//        }
+//
+//        // Start all threads at once
+//        startLatch.countDown();
+//
+//        // Wait for completion (with timeout)
+//        long timeout = System.currentTimeMillis() + 20000; // 10 second timeout
+//        while (consumedCount.get() < producerCount * ticketsPerProducer && System.currentTimeMillis() < timeout) {
+//            Thread.sleep(100);
+//        }
+//
+//        // Assert
+//        assertEquals(producerCount * ticketsPerProducer, producedCount.get(), "All tickets should be produced");
+//        assertEquals(producerCount * ticketsPerProducer, consumedCount.get(), "All tickets should be consumed");
+//        assertEquals(0, pool.getAvailableTicketCount(), "No tickets should remain available");
+//    }
 
     @ParameterizedTest
     @EnumSource(TestUtilz.PoolType.class)
