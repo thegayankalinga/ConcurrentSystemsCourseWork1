@@ -12,7 +12,7 @@ public class SynchronizedTicketPool implements TicketPool {
     private final int TIME_OUT = 5000;
     //Shared Resource
     private final Queue<Ticket> tickets;
-    private Queue<Ticket> availableTickets;
+    //private Queue<Ticket> availableTickets;
     private Queue<Ticket> soldTickets;
     private final int capacity;
     private final AtomicLong ticketIdCounter;
@@ -25,7 +25,7 @@ public class SynchronizedTicketPool implements TicketPool {
     public SynchronizedTicketPool(int capacity) {
         this.capacity = capacity;
         tickets = new LinkedList<>();
-        availableTickets = new LinkedList<>();
+        //availableTickets = new LinkedList<>();
         soldTickets = new LinkedList<>();
         this.ticketIdCounter = new AtomicLong(1);
     }
@@ -54,7 +54,7 @@ public class SynchronizedTicketPool implements TicketPool {
 
         // Now we have space
         tickets.offer(ticket);
-        refreshAvailableTicket();
+//        refreshAvailableTicket();
         notifyAll();
         return true;
     }
@@ -95,11 +95,11 @@ public class SynchronizedTicketPool implements TicketPool {
 //    }
 
     //Update Available Tickets List after purchase and Add (optional)
-    private void refreshAvailableTicket(){
-        availableTickets = tickets.stream()
-                .filter(ticket -> !ticket.isSold())
-                .collect(LinkedList::new, LinkedList::add, LinkedList::addAll);
-    }
+//    private void refreshAvailableTicket(){
+//        availableTickets = tickets.stream()
+//                .filter(ticket -> !ticket.isSold())
+//                .collect(LinkedList::new, LinkedList::add, LinkedList::addAll);
+//    }
 
     //Get all the available tickets if required
     public List<Ticket> getAvailableTickets() {
@@ -128,7 +128,10 @@ public class SynchronizedTicketPool implements TicketPool {
 
     @Override
     public synchronized Optional<Ticket> purchaseTicket() {
-        while (true) {
+        long startTime = System.currentTimeMillis();
+        long totalTimeout = TIME_OUT;
+
+        while (System.currentTimeMillis() - startTime < totalTimeout) {
             if (!tickets.isEmpty()) {
                 Ticket ticket = tickets.poll(); // remove and return the first unsold ticket
                 ticket.setSold(true);
@@ -137,15 +140,24 @@ public class SynchronizedTicketPool implements TicketPool {
                 return Optional.of(ticket);
             }
 
+            // Calculate remaining timeout
+            long elapsed = System.currentTimeMillis() - startTime;
+            long remainingTime = totalTimeout - elapsed;
+
+            if (remainingTime <= 0) {
+                return Optional.empty();
+            }
+
             // No ticket found, wait
             try {
-                wait(TIME_OUT);
+                wait(Math.min(remainingTime, 500));
             } catch (InterruptedException e) {
                 System.out.println(Thread.currentThread().getName() + " was interrupted during purchase.");
                 Thread.currentThread().interrupt();
                 return Optional.empty();
             }
         }
+        return Optional.empty();
     }
 //    //Purchase Tickets by Consumers & Writers
 //    @Override
@@ -286,7 +298,7 @@ public class SynchronizedTicketPool implements TicketPool {
     }
 
     public int getAllTicketsCount() {
-        return tickets.size() + soldTickets.size();
+        return (tickets.size() + soldTickets.size());
     }
 
     //Print the Statistics
@@ -297,32 +309,79 @@ public class SynchronizedTicketPool implements TicketPool {
         int sold = getSoldTicketCount();
         double percentageSold = total > 0 ? (double) sold / total * 100 : 0;
 
-        System.out.println("========== TICKET POOL STATISTICS ==========");
-        System.out.println("Total tickets: " + total + "/" + capacity);
-        System.out.println("Available tickets: " + available);
-        System.out.println("Sold tickets: " + sold);
-        System.out.printf("Percentage sold: %.2f%%\n", percentageSold);
+        // ANSI color codes for terminal output
+        final String RESET = "\u001B[0m";
+        final String BOLD = "\u001B[1m";
+        final String GREEN = "\u001B[32m";
+        final String BLUE = "\u001B[34m";
+        final String YELLOW = "\u001B[33m";
+        final String RED = "\u001B[31m";
 
-        //Print Each Ticket Details if Required
-//        if (total > 0) {
-//            System.out.println("\nTicket details:");
-//            System.out.println("-------------------------------------------------");
-//            System.out.printf("%-10s %-20s %-15s %-20s %-10s %-10s\n",
-//                    "ID", "Event", "Vendor", "Location", "Price", "Status");
-//            System.out.println("-------------------------------------------------");
-//
-//            for (Ticket ticket : tickets) {
-//                System.out.printf("%-10d %-20s %-15s %-20s $%-9.2f %s\n",
-//                        ticket.getTicketId(),
-//                        truncate(ticket.getEventName(), 20),
-//                        truncate(ticket.getVendorName(), 15),
-//                        truncate(ticket.getLocation(), 20),
-//                        ticket.getPrice(),
-//                        ticket.isSold() ? "SOLD" : "AVAILABLE");
-//            }
-//        }
-        System.out.println("==============================================");
+        System.out.println();
+        System.out.println(BOLD + "╔══════════════ TICKET POOL STATISTICS ══════════════╗" + RESET);
+
+        // Progress bar for capacity utilization
+        int barLength = 30;
+        int filledBlocks = total > 0 ? (int)((double)total/capacity * barLength) : 0;
+        int soldBlocks = total > 0 ? (int)((double)sold/capacity * barLength) : 0;
+
+        StringBuilder capacityBar = new StringBuilder("[");
+        for (int i = 0; i < barLength; i++) {
+            if (i < soldBlocks) {
+                capacityBar.append(RED + "█" + RESET); // Sold tickets
+            } else if (i < filledBlocks) {
+                capacityBar.append(GREEN + "█" + RESET); // Available tickets
+            } else {
+                capacityBar.append("░"); // Empty space
+            }
+        }
+        capacityBar.append("] ");
+        capacityBar.append(String.format("%d/%d", total, capacity));
+
+        System.out.println("║ " + BOLD + "Capacity: " + RESET + capacityBar);
+        System.out.println("║ " + BOLD + "Available: " + RESET + GREEN + available + RESET +
+                " | " + BOLD + "Sold: " + RESET + RED + sold + RESET +
+                " | " + BOLD + "Percentage sold: " + RESET +
+                (percentageSold > 75 ? RED : percentageSold > 50 ? YELLOW : GREEN) +
+                String.format("%.2f%%", percentageSold) + RESET);
+
+        System.out.println(BOLD + "╚══════════════════════════════════════════════════════╝" + RESET);
+        System.out.println();
     }
+//    @Override
+//    public synchronized void printTicketPoolStatus() {
+//        int total = getAllTicketsCount();
+//        int available = getAvailableTicketCount();
+//        int sold = getSoldTicketCount();
+//        double percentageSold = total > 0 ? (double) sold / total * 100 : 0;
+//
+//        System.out.println("========== TICKET POOL STATISTICS ==========");
+//        System.out.println("Total tickets: " + total + "/" + capacity);
+//        System.out.println("Available tickets: " + available);
+//        System.out.println("Sold tickets: " + sold);
+//        System.out.printf("Percentage sold: %.2f%%\n", percentageSold);
+//
+//        //Print Each Ticket Details if Required
+
+    /// /        if (total > 0) {
+    /// /            System.out.println("\nTicket details:");
+    /// /            System.out.println("-------------------------------------------------");
+    /// /            System.out.printf("%-10s %-20s %-15s %-20s %-10s %-10s\n",
+    /// /                    "ID", "Event", "Vendor", "Location", "Price", "Status");
+    /// /            System.out.println("-------------------------------------------------");
+    /// /
+    /// /            for (Ticket ticket : tickets) {
+    /// /                System.out.printf("%-10d %-20s %-15s %-20s $%-9.2f %s\n",
+    /// /                        ticket.getTicketId(),
+    /// /                        truncate(ticket.getEventName(), 20),
+    /// /                        truncate(ticket.getVendorName(), 15),
+    /// /                        truncate(ticket.getLocation(), 20),
+    /// /                        ticket.getPrice(),
+    /// /                        ticket.isSold() ? "SOLD" : "AVAILABLE");
+    /// /            }
+    /// /        }
+//        System.out.println("==============================================");
+//    }
 
     //Create Ticket
     public synchronized Ticket createTicket(

@@ -1,4 +1,4 @@
-package utilz;
+package com.gayan.utilz;
 
 import com.gayan.entities.TicketPool;
 import com.gayan.versions.BlockingQueueTicketPool;
@@ -12,9 +12,12 @@ import com.gayan.workers.Writer;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
+
+import static com.gayan.utilz.TerminalColorConstant.WHITE_BACKGROUND;
 
 public class SimulationManager {
     private TicketPool ticketPool;
@@ -79,8 +82,8 @@ public class SimulationManager {
         while(running){
             printMenu();
             int menuChoice = getValidatedIntegerInput(scanner,
-                    "Enter your choice (0-9): ",
-                    0, 10, TerminalColorConstant.WHITE_BOLD);
+                    "Enter your choice (0-14): ",
+                    0, 14, TerminalColorConstant.WHITE_BOLD);
 
             switch (menuChoice) {
                 case 1 -> {
@@ -99,27 +102,140 @@ public class SimulationManager {
                     addReader();
                     printHeader("Add Reader");
                 }
+
                 case 5 -> {
+                    // Ask for number of tickets
+                    String msg = MessageFormat.format(
+                            TerminalColorConstant.CYAN + "\nEnter the number of tickets to produce (1-{0}): " + TerminalColorConstant.RESET,
+                            capacity);
+                    int maxTickets = getValidatedIntegerInput(scanner, msg, 1, capacity, TerminalColorConstant.WHITE_BOLD);
+
+                    // Ask for creation rate
+                    System.out.println(TerminalColorConstant.CYAN + "\nChoose ticket creation speed:" + TerminalColorConstant.RESET);
+                    System.out.println(TerminalColorConstant.CYAN + "1. Very Fast (1 second)" + TerminalColorConstant.RESET);
+                    System.out.println(TerminalColorConstant.CYAN + "2. Fast (2 seconds)" + TerminalColorConstant.RESET);
+                    System.out.println(TerminalColorConstant.CYAN + "3. Moderate (3 seconds)" + TerminalColorConstant.RESET);
+                    System.out.println(TerminalColorConstant.CYAN + "4. Slow (4 seconds)" + TerminalColorConstant.RESET);
+                    System.out.println(TerminalColorConstant.CYAN + "5. Very Slow (5 seconds)" + TerminalColorConstant.RESET);
+
+                    int creationRateChoice = getValidatedIntegerInput(scanner,
+                            "Select creation speed (1-5): ",
+                            1, 5, TerminalColorConstant.WHITE_BOLD);
+
+                    int creationRateMillis = creationRateChoice * 1000; // 1 -> 1000ms, 2 -> 2000ms, etc.
+
+                    // Create and add producer
+                    addProducer(creationRateMillis, maxTickets);
+                    printHeader("Add Custom Producer");
+                }
+
+                case 6 -> {
+                    // Ask for number of tickets
+                    String msg = MessageFormat.format(
+                            TerminalColorConstant.CYAN + "\nEnter max no of tickets to purchase (1-{0}): " + TerminalColorConstant.RESET,
+                            capacity);
+                    int maxTickets = getValidatedIntegerInput(scanner, msg, 1, capacity, TerminalColorConstant.WHITE_BOLD);
+
+                    // Ask for creation rate
+                    System.out.println(TerminalColorConstant.CYAN + "\nChoose ticket purchasing speed:" + TerminalColorConstant.RESET);
+                    System.out.println(TerminalColorConstant.CYAN + "1. Very Fast (1 second)" + TerminalColorConstant.RESET);
+                    System.out.println(TerminalColorConstant.CYAN + "2. Fast (2 seconds)" + TerminalColorConstant.RESET);
+                    System.out.println(TerminalColorConstant.CYAN + "3. Moderate (3 seconds)" + TerminalColorConstant.RESET);
+                    System.out.println(TerminalColorConstant.CYAN + "4. Slow (4 seconds)" + TerminalColorConstant.RESET);
+                    System.out.println(TerminalColorConstant.CYAN + "5. Very Slow (5 seconds)" + TerminalColorConstant.RESET);
+
+                    int creationRateChoice = getValidatedIntegerInput(scanner,
+                            "\nSelect purchasing speed (1-5): ",
+                            1, 5, TerminalColorConstant.WHITE_BOLD);
+
+                    System.out.println(TerminalColorConstant.CYAN + "\nChoose Allow Cancel Ticket after purchasing ?:" + TerminalColorConstant.RESET);
+                    System.out.println(TerminalColorConstant.CYAN + "1. Yes" + TerminalColorConstant.RESET);
+                    System.out.println(TerminalColorConstant.CYAN + "2. No" + TerminalColorConstant.RESET);
+
+                    int allowCancel = getValidatedIntegerInput(scanner,
+                            "\nSelect Allow or not ? (1-2): ",
+                            1, 2, TerminalColorConstant.WHITE_BOLD);
+
+                    int creationRateMillis = creationRateChoice * 1000; // 1 -> 1000ms, 2 -> 2000ms, etc.
+                    boolean canceled = allowCancel == 1;
+                    // Create and add Consumer
+                    addConsumer(creationRateMillis, maxTickets, canceled);
+                    printHeader("Custom Consumer");
+                }
+
+                case 7 -> {
+                    // Ask for number of tickets
+                    String msg = MessageFormat.format(
+                            TerminalColorConstant.CYAN + "\nEnter the number of tickets to update (1-{0}): " + TerminalColorConstant.RESET,
+                            capacity);
+                    int maxTickets = getValidatedIntegerInput(scanner, msg, 1, capacity, TerminalColorConstant.WHITE_BOLD);
+
+                    // Ask for creation rate
+                    System.out.println(TerminalColorConstant.CYAN + "\nChoose ticket update speed:" + TerminalColorConstant.RESET);
+                    System.out.println(TerminalColorConstant.CYAN + "1. Very Fast (1 second)" + TerminalColorConstant.RESET);
+                    System.out.println(TerminalColorConstant.CYAN + "2. Fast (2 seconds)" + TerminalColorConstant.RESET);
+                    System.out.println(TerminalColorConstant.CYAN + "3. Moderate (3 seconds)" + TerminalColorConstant.RESET);
+                    System.out.println(TerminalColorConstant.CYAN + "4. Slow (4 seconds)" + TerminalColorConstant.RESET);
+                    System.out.println(TerminalColorConstant.CYAN + "5. Very Slow (5 seconds)" + TerminalColorConstant.RESET);
+
+                    int creationRateChoice = getValidatedIntegerInput(scanner,
+                            "Select update speed (1-5): ",
+                            1, 5, TerminalColorConstant.WHITE_BOLD);
+
+                    int creationRateMillis = creationRateChoice * 1000; // 1 -> 1000ms, 2 -> 2000ms, etc.
+
+                    // Create and add producer
+                    addWriter(creationRateMillis, maxTickets);
+                    printHeader("Custom Writer");
+                }
+
+                case 8 -> {
+                    // Ask for number of tickets
+                    String msg = MessageFormat.format(
+                            TerminalColorConstant.CYAN + "\nEnter the number of tickets to read (1-{0}): " + TerminalColorConstant.RESET,
+                            capacity);
+                    int maxTickets = getValidatedIntegerInput(scanner, msg, 1, capacity, TerminalColorConstant.WHITE_BOLD);
+
+                    // Ask for creation rate
+                    System.out.println(TerminalColorConstant.CYAN + "\nChoose ticket reading speed:" + TerminalColorConstant.RESET);
+                    System.out.println(TerminalColorConstant.CYAN + "1. Very Fast (1 second)" + TerminalColorConstant.RESET);
+                    System.out.println(TerminalColorConstant.CYAN + "2. Fast (2 seconds)" + TerminalColorConstant.RESET);
+                    System.out.println(TerminalColorConstant.CYAN + "3. Moderate (3 seconds)" + TerminalColorConstant.RESET);
+                    System.out.println(TerminalColorConstant.CYAN + "4. Slow (4 seconds)" + TerminalColorConstant.RESET);
+                    System.out.println(TerminalColorConstant.CYAN + "5. Very Slow (5 seconds)" + TerminalColorConstant.RESET);
+
+                    int creationRateChoice = getValidatedIntegerInput(scanner,
+                            "Select reading speed (1-5): ",
+                            1, 5, TerminalColorConstant.WHITE_BOLD);
+
+                    int creationRateMillis = creationRateChoice * 1000; // 1 -> 1000ms, 2 -> 2000ms, etc.
+
+                    // Create and add producer
+                    addReader(creationRateMillis, maxTickets);
+                    printHeader("Custom Reader");
+                }
+
+                case 9 -> {
                     removeProducer();
                     printHeader("Remove Producer");
                 }
-                case 6 -> {
+                case 10 -> {
                     removeConsumer();
                     printHeader("Remove Consumer");
                 }
-                case 7 -> {
+                case 11 -> {
                     removeWriter();
                     printHeader("Remove Writer");
                 }
-                case 8 -> {
+                case 12 -> {
                     removeReader();
                     printHeader("Remove Reader");
                 }
-                case 9 -> {
+                case 13 -> {
                     ticketPool.printTicketPoolStatus();
                     printHeader("Show Ticket Pool Status");
                 }
-                case 10 -> {
+                case 14 -> {
                     printWorkersSummary();
                     printHeader("Show Workers & Threads Summary");
                 }
@@ -195,27 +311,35 @@ public class SimulationManager {
 
         // 2. Implement Grouped Menu Categories
         // Add Operations Group
-        System.out.println(TerminalColorConstant.GREEN_BOLD + "\n-- Add Operations --" + TerminalColorConstant.RESET);
-        System.out.println(TerminalColorConstant.GREEN + "1. Add Producer" + TerminalColorConstant.RESET);
-        System.out.println(TerminalColorConstant.CYAN + "2. Add Consumer" + TerminalColorConstant.RESET);
+        System.out.println(TerminalColorConstant.GREEN_BOLD + "\n-- Add Default Operations --" + TerminalColorConstant.RESET);
+        System.out.println(TerminalColorConstant.PURPLE + "1. Add Producer" + TerminalColorConstant.RESET);
+        System.out.println(TerminalColorConstant.PURPLE + "2. Add Consumer" + TerminalColorConstant.RESET);
         System.out.println(TerminalColorConstant.PURPLE + "3. Add Writer" + TerminalColorConstant.RESET);
-        System.out.println(TerminalColorConstant.BLUE + "4. Add Reader" + TerminalColorConstant.RESET);
+        System.out.println(TerminalColorConstant.PURPLE + "4. Add Reader" + TerminalColorConstant.RESET);
+
+        // Add Operations Group
+        System.out.println(TerminalColorConstant.GREEN_BOLD + "\n-- Add Custom Operations --" + TerminalColorConstant.RESET);
+        System.out.println(TerminalColorConstant.BLUE + "5. Add Custom Producer" + TerminalColorConstant.RESET);
+        System.out.println(TerminalColorConstant.BLUE + "6. Add Custom Consumer" + TerminalColorConstant.RESET);
+        System.out.println(TerminalColorConstant.BLUE + "7. Add Custom Writer" + TerminalColorConstant.RESET);
+        System.out.println(TerminalColorConstant.BLUE + "8. Add Custom Reader" + TerminalColorConstant.RESET);
+
 
         // Remove Operations Group
         System.out.println(TerminalColorConstant.RED_BOLD + "\n-- Remove Operations --" + TerminalColorConstant.RESET);
-        System.out.println(TerminalColorConstant.RED + "5. Remove Producer" + TerminalColorConstant.RESET);
-        System.out.println(TerminalColorConstant.RED + "6. Remove Consumer" + TerminalColorConstant.RESET);
-        System.out.println(TerminalColorConstant.RED + "7. Remove Writer" + TerminalColorConstant.RESET);
-        System.out.println(TerminalColorConstant.RED + "8. Remove Reader" + TerminalColorConstant.RESET);
+        System.out.println(TerminalColorConstant.RED + "9. Remove Producer" + TerminalColorConstant.RESET);
+        System.out.println(TerminalColorConstant.RED + "10. Remove Consumer" + TerminalColorConstant.RESET);
+        System.out.println(TerminalColorConstant.RED + "11. Remove Writer" + TerminalColorConstant.RESET);
+        System.out.println(TerminalColorConstant.RED + "12. Remove Reader" + TerminalColorConstant.RESET);
 
         // Status Operations Group
         System.out.println(TerminalColorConstant.YELLOW_BOLD + "\n-- Status Operations --" + TerminalColorConstant.RESET);
-        System.out.println(TerminalColorConstant.YELLOW_BOLD + "9. Show Ticket Pool Status" + TerminalColorConstant.RESET);
-        System.out.println(TerminalColorConstant.YELLOW_BOLD + "10. Show Workers & Threads Summary" + TerminalColorConstant.RESET);
+        System.out.println(TerminalColorConstant.YELLOW + "13. Show Ticket Pool Status" + TerminalColorConstant.RESET);
+        System.out.println(TerminalColorConstant.YELLOW + "14. Show Workers & Threads Summary" + TerminalColorConstant.RESET);
 
         // System Operations
         System.out.println(TerminalColorConstant.RED_BOLD + "\n-- System --" + TerminalColorConstant.RESET);
-        System.out.println(TerminalColorConstant.RED_BOLD + "0. Shutdown" + TerminalColorConstant.RESET);
+        System.out.println(TerminalColorConstant.RED + "0. Shutdown" + TerminalColorConstant.RESET);
 
         System.out.println(TerminalColorConstant.WHITE_BOLD + "\nSynchronization Method: " + TerminalColorConstant.RESET + syncMethodName);
         System.out.print(TerminalColorConstant.WHITE_BOLD + "Enter your choice (0-10): " + TerminalColorConstant.RESET);
@@ -345,13 +469,31 @@ public class SimulationManager {
         System.out.println(TerminalColorConstant.GREEN + thread.getName() + " started successfully." + TerminalColorConstant.RESET);
     }
 
+    private void addProducer(int creationRateMillis, int maxTickets) {
+        String threadName = "Producer-" + (producers.size() + 1);
+        Producer producer = new Producer(
+                ticketPool,
+                creationRateMillis,
+                maxTickets,
+                "Concert",
+                threadName,
+                "Colombo",
+                100.00);
+        Thread thread = new Thread(producer, threadName);
+        producers.add(producer);
+        producerThreads.add(thread);
+        thread.start();
+        System.out.println(TerminalColorConstant.GREEN + thread.getName() +
+                " started successfully (Rate: " + creationRateMillis + "ms, Max: " +
+                maxTickets + " tickets)" + TerminalColorConstant.RESET);
+    }
+
     private void addConsumer() {
         String threadName = "Consumer-" + (consumers.size() + 1);
         Consumer consumer = new Consumer(
                 ticketPool,
                 8,
                 5,
-                threadName,
                 true);
 
         Thread thread = new Thread(consumer, threadName);
@@ -361,8 +503,35 @@ public class SimulationManager {
         System.out.println(TerminalColorConstant.GREEN + thread.getName() + " started successfully." + TerminalColorConstant.RESET);
     }
 
+    private void addConsumer(int purchaseLimit, int purchaseRate, boolean simulateCancel) {
+        String threadName = "Consumer-" + (consumers.size() + 1);
+        Consumer consumer = new Consumer(
+                ticketPool,
+                purchaseLimit,
+                purchaseRate,
+                simulateCancel);
+
+        Thread thread = new Thread(consumer, threadName);
+        consumers.add(consumer);
+        consumerThreads.add(thread);
+        thread.start();
+        System.out.println(TerminalColorConstant.GREEN + thread.getName() + " started successfully." + TerminalColorConstant.RESET);
+    }
+
     private void addWriter() {
-        Writer writer = new Writer(ticketPool, 2000, "Writer", 10);
+        Writer writer = new Writer(ticketPool, 2000, 10);
+        Thread thread = new Thread(writer, "Writer-" + (writers.size() + 1));
+        writers.add(writer);
+        writerThreads.add(thread);
+        thread.start();
+        System.out.println(TerminalColorConstant.GREEN + thread.getName() + " started successfully." + TerminalColorConstant.RESET);
+    }
+
+    private void addWriter(int updateAtRateMillis, int maxUpdateAttempts) {
+        Writer writer = new Writer(
+                ticketPool, updateAtRateMillis,
+                maxUpdateAttempts);
+
         Thread thread = new Thread(writer, "Writer-" + (writers.size() + 1));
         writers.add(writer);
         writerThreads.add(thread);
@@ -372,6 +541,18 @@ public class SimulationManager {
 
     private void addReader() {
         Reader reader = new Reader(ticketPool, 3000, 50);
+        Thread thread = new Thread(reader, "Reader-" + (readers.size() + 1));
+        readers.add(reader);
+        readerThreads.add(thread);
+        thread.start();
+        System.out.println(TerminalColorConstant.GREEN + thread.getName() + " started successfully." + TerminalColorConstant.RESET);
+    }
+
+    private void addReader(int readAtRateMillis, int maxReadAttempts) {
+        Reader reader = new Reader(
+                ticketPool, readAtRateMillis,
+                maxReadAttempts);
+
         Thread thread = new Thread(reader, "Reader-" + (readers.size() + 1));
         readers.add(reader);
         readerThreads.add(thread);
@@ -390,6 +571,8 @@ public class SimulationManager {
             System.out.println(TerminalColorConstant.YELLOW + "No producers to remove." + TerminalColorConstant.RESET);
         }
     }
+
+
 
     private void removeConsumer() {
         if (!consumers.isEmpty()) {

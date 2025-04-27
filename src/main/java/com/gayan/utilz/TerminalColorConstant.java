@@ -1,4 +1,4 @@
-package utilz;
+package com.gayan.utilz;
 
 public class TerminalColorConstant {
     // Reset

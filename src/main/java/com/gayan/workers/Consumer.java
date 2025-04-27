@@ -12,11 +12,11 @@ public class Consumer implements Runnable{
     private static final ConcurrentHashMap<String, AtomicInteger> consumerTicketCount = new ConcurrentHashMap<>();
 
     private int counter = 0;
+    private int cancelCount = 0;
 
     private final TicketPool ticketPool;
     private final int purchaseLimit; //configuration
     private final int purchaseRateAtMillis; //Rate at which they can buy configuration
-    private final String consumerName;
     //This is created to mainly simulate the real world allowing to do stress testing
     private static final ThreadLocalRandom random = ThreadLocalRandom.current();
     private final boolean simulateCancel; //configuration
@@ -25,19 +25,17 @@ public class Consumer implements Runnable{
 
     private volatile boolean running = true; //Dynamically remove the consumer
 
-    public Consumer(TicketPool ticketPool, int purchaseRateAtMillis, int purchaseLimit, String consumerName) {
+    public Consumer(TicketPool ticketPool, int purchaseRateAtMillis, int purchaseLimit) {
         this.ticketPool = ticketPool;
         this.purchaseRateAtMillis = purchaseRateAtMillis;
         this.purchaseLimit = purchaseLimit;
-        this.consumerName = consumerName;
         this.simulateCancel = false;
     }
 
-    public Consumer(TicketPool ticketPool, int purchaseLimit, int purchaseRateAtMillis, String consumerName, boolean simulateCancel) {
+    public Consumer(TicketPool ticketPool, int purchaseLimit, int purchaseRateAtMillis, boolean simulateCancel) {
         this.ticketPool = ticketPool;
         this.purchaseLimit = purchaseLimit;
         this.purchaseRateAtMillis = purchaseRateAtMillis;
-        this.consumerName = consumerName;
         this.simulateCancel = simulateCancel;
     }
 
@@ -70,7 +68,7 @@ public class Consumer implements Runnable{
                 break;
             }
         }
-        System.out.println(Thread.currentThread().getName() + " finished purchasing tickets.");
+        //System.out.println(Thread.currentThread().getName() + " finished purchasing tickets.");
         printConsumerSummary();
     }
 
@@ -78,8 +76,8 @@ public class Consumer implements Runnable{
         try{
             consumerTicketCount.computeIfAbsent(Thread.currentThread().getName(), k -> new AtomicInteger(0)).incrementAndGet();
             counter++;
-            System.out.println(Thread.currentThread().getName() +
-                    " purchased ticket: " + ticket.getTicketId());
+//            System.out.println(Thread.currentThread().getName() +
+//                    " purchased ticket: " + ticket.getTicketId());
 
             //Simulate real world cancellation behavior
             if(simulateCancel) {
@@ -90,12 +88,13 @@ public class Consumer implements Runnable{
                 if (willCancel) {
                     ticketPool.cancelTicket(ticket);
                     counter--;
-                    System.out.println(Thread.currentThread().getName() +
-                            " cancelled the ticket:" + ticket.getTicketId());
+                    cancelCount++;
+//                    System.out.println(Thread.currentThread().getName() +
+//                            " cancelled the ticket:" + ticket.getTicketId());
                 } else {
 
-                    System.out.println(Thread.currentThread().getName() +
-                            " Kept the ticket: " + ticket.getTicketId());
+//                    System.out.println(Thread.currentThread().getName() +
+//                            " Kept the ticket: " + ticket.getTicketId());
                 }
             }
 

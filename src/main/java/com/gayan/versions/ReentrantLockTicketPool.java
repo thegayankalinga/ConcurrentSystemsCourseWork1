@@ -31,7 +31,7 @@ public class ReentrantLockTicketPool implements TicketPool {
 
     @Override
     public boolean addTicket(Ticket ticket) {
-        boolean added = false;
+        boolean added;
         lock.lock();
         try {
             long startTime = System.currentTimeMillis();
@@ -90,7 +90,10 @@ public class ReentrantLockTicketPool implements TicketPool {
     public Optional<Ticket> purchaseTicket() {
         lock.lock();
         try {
-            while (true) {
+            long startTime = System.currentTimeMillis();
+            long remainingTime = TIME_OUT;
+
+            while (remainingTime > 0) {
                 Optional<Ticket> optionalTicket = tickets.stream()
                         .filter(ticket -> !ticket.isSold())
                         .findFirst();
@@ -100,8 +103,18 @@ public class ReentrantLockTicketPool implements TicketPool {
                     notFull.signalAll();
                     return Optional.of(ticket);
                 }
-                notEmpty.await();
+                boolean signaled = notEmpty.await(remainingTime, TimeUnit.MILLISECONDS);
+
+                // Recalculate remaining time
+                long elapsed = System.currentTimeMillis() - startTime;
+                remainingTime = TIME_OUT - elapsed;
+
+                // If timed out and still no ticket, exit
+                if (!signaled && remainingTime <= 0) {
+                    return Optional.empty();
+                }
             }
+            return Optional.empty();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return Optional.empty();

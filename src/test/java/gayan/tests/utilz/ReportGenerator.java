@@ -17,6 +17,13 @@ import java.util.Map;
  */
 public class ReportGenerator {
 
+
+    public static void main(String[] args) {
+        System.out.println("Running performance tests and generating report...");
+        Map<String, Map<TestUtilz.PoolType, Long>> results = runPerformanceTests();
+        generatePerformanceReport(results);
+        System.out.println("Performance testing complete.");
+    }
     /**
      * Generates an HTML report comparing the performance of different TicketPool implementations
      * @param results Map of performance results indexed by operation type and implementation

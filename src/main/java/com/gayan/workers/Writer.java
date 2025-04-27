@@ -6,7 +6,7 @@ import com.gayan.entities.TicketPool;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
-//This is like a admin in a system for maintenance
+//This is like an admin in a system for maintenance
 public class Writer implements Runnable{
 
     private final TicketPool ticketPool;
@@ -14,17 +14,15 @@ public class Writer implements Runnable{
     private final int updateAtRateMillis;
     private final int maxUpdateAttempts;
     private final boolean isUpdateDataProvided;
-    private final String writerName;
     private String newEventName = "";
     private double newPrice = 0.00;
     private String newLocation = "";
 
     private volatile boolean running = true;
 
-    public Writer(TicketPool ticketPool, int updateAtRateMillis, String writerName, int maxUpdateAttempts) {
+    public Writer(TicketPool ticketPool, int updateAtRateMillis, int maxUpdateAttempts) {
         this.ticketPool = ticketPool;
         this.updateAtRateMillis = updateAtRateMillis;
-        this.writerName = writerName;
         this.maxUpdateAttempts = maxUpdateAttempts;
         isUpdateDataProvided = false;
     }
@@ -32,13 +30,11 @@ public class Writer implements Runnable{
     public Writer(
             TicketPool ticketPool,
             int updateAtRateMillis,
-            String writerName,
             String newEventName,
             double newPrice, String newLocation,
             int maxUpdateAttempts) {
         this.ticketPool = ticketPool;
         this.updateAtRateMillis = updateAtRateMillis;
-        this.writerName = writerName;
         this.newEventName = newEventName;
         this.newPrice = newPrice;
         this.newLocation = newLocation;

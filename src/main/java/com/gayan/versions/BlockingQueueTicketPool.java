@@ -55,7 +55,11 @@ public class BlockingQueueTicketPool implements TicketPool {
 
     @Override
     public Optional<Ticket> purchaseTicket() {
-        while (true) {
+
+        long startTime = System.currentTimeMillis();
+        long endTime = startTime + TIME_OUT;
+
+        while (System.currentTimeMillis() < endTime) {
             try {
                 List<Ticket> availableTickets = getAvailableTickets();
                 if (!availableTickets.isEmpty()) {
@@ -70,12 +74,18 @@ public class BlockingQueueTicketPool implements TicketPool {
                         lock.writeLock().unlock();
                     }
                 }
-                Thread.sleep(50); // reduced wait
+                // Calculate remaining time
+                long remainingTime = endTime - System.currentTimeMillis();
+                if (remainingTime <= 0) break;
+
+                // Sleep for shorter of 50ms or remaining time
+                Thread.sleep(Math.min(50, remainingTime));
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 return Optional.empty();
             }
         }
+        return Optional.empty();
     }
 
     @Override
