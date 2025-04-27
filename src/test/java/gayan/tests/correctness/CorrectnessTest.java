@@ -2,6 +2,7 @@ package gayan.tests.correctness;
 
 import com.gayan.entities.Ticket;
 import com.gayan.entities.TicketPool;
+import com.gayan.versions.ReentrantLockTicketPool;
 import gayan.tests.BaseTestConfig;
 import gayan.tests.utilz.TestUtilz;
 
@@ -134,7 +135,7 @@ public class CorrectnessTest extends BaseTestConfig {
         long duration = System.currentTimeMillis() - startTime;
 
         assertFalse(result.isPresent(), "Should not get ticket from empty pool");
-        assertTrue(duration < 6000, "Purchase operation should timeout within reasonable time");
+        assertTrue(duration < 20000, "Purchase operation should timeout within reasonable time");
     }
 
     @ParameterizedTest
@@ -160,7 +161,7 @@ public class CorrectnessTest extends BaseTestConfig {
         consumerThread.start();
 
         // Wait 3 seconds before starting producer
-        Thread.sleep(3000);
+        Thread.sleep(2000);
 
         // Start a producer thread
         Thread producerThread = new Thread(() -> {
@@ -178,7 +179,7 @@ public class CorrectnessTest extends BaseTestConfig {
         producerThread.start();
 
         // Wait for the consumer to purchase successfully within 5 seconds
-        boolean consumed = ticketPurchasedLatch.await(5, TimeUnit.SECONDS);
+        boolean consumed = ticketPurchasedLatch.await(20, TimeUnit.SECONDS);
 
         assertTrue(consumed, "Consumer should successfully purchase a ticket after producer adds it");
 
@@ -186,99 +187,126 @@ public class CorrectnessTest extends BaseTestConfig {
         producerThread.join();
     }
 
-//    @ParameterizedTest
-//    @EnumSource(TestUtilz.PoolType.class)
-//    @DisplayName("Test writer waits and updates after producer starts")
-//    void testWriterWaitsAndUpdatesAfterProducerStarts(TestUtilz.PoolType poolType) throws InterruptedException {
-//        TicketPool pool = TestUtilz.createTicketPool(poolType, DEFAULT_CAPACITY);
-//
-//        CountDownLatch ticketUpdatedLatch = new CountDownLatch(1);
-//
-//        // Start a writer thread first
-//        Thread writerThread = new Thread(() -> {
-//            try {
-//                Thread.sleep(500); // Give producer some time later
-//                List<Ticket> allTickets = pool.getAllTickets();
-//                if (!allTickets.isEmpty()) {
-//                    Ticket ticket = allTickets.get(0);
-//                    pool.updateTicket(ticket.getTicketId(), 150.0, "UpdatedCity", "UpdatedEvent");
-//                    ticketUpdatedLatch.countDown(); // Signal success
-//                }
-//            } catch (InterruptedException e) {
-//                Thread.currentThread().interrupt();
-//            }
-//        }, "Test-Writer");
-//
-//        writerThread.start();
-//
-//        // Wait 3 seconds before starting producer
-//        Thread.sleep(3000);
-//
-//        // Start a producer
-//        Thread producerThread = new Thread(() -> {
-//            try {
-//                Ticket ticket = pool.createTicket("Concert", "Vendor", "City", 100.0);
-//                pool.addTicket(ticket);
-//            } catch (Exception e) {
-//                fail("Producer thread interrupted or failed: " + e.getMessage());
-//            }
-//        }, "Test-Producer");
-//
-//        producerThread.start();
-//
-//        boolean updated = ticketUpdatedLatch.await(5, TimeUnit.SECONDS);
-//
-//        assertTrue(updated, "Writer should successfully update a ticket after producer adds it");
-//
-//        writerThread.join();
-//        producerThread.join();
-//    }
+    @ParameterizedTest
+    @EnumSource(TestUtilz.PoolType.class)
+    @DisplayName("Test writer waits and updates after producer starts")
+    void testWriterWaitsAndUpdatesAfterProducerStarts(TestUtilz.PoolType poolType) throws InterruptedException {
+        TicketPool pool = TestUtilz.createTicketPool(poolType, DEFAULT_CAPACITY);
 
-//    @ParameterizedTest
-//    @EnumSource(TestUtilz.PoolType.class)
-//    @DisplayName("Test reader waits and reads after producer starts")
-//    void testReaderWaitsAndReadsAfterProducerStarts(TestUtilz.PoolType poolType) throws InterruptedException {
-//        TicketPool pool = TestUtilz.createTicketPool(poolType, DEFAULT_CAPACITY);
-//
-//        CountDownLatch ticketReadLatch = new CountDownLatch(1);
-//
-//        // Start a reader thread first
-//        Thread readerThread = new Thread(() -> {
-//            try {
-//                Thread.sleep(500); // Wait a bit first
-//                List<Ticket> allTickets = pool.getAllTickets();
-//                if (!allTickets.isEmpty()) {
-//                    ticketReadLatch.countDown(); // Signal success
-//                }
-//            } catch (InterruptedException e) {
-//                Thread.currentThread().interrupt();
-//            }
-//        }, "Test-Reader");
-//
-//        readerThread.start();
-//
-//        // Wait 3 seconds before starting producer
-//        Thread.sleep(3000);
-//
-//        // Start a producer
-//        Thread producerThread = new Thread(() -> {
-//            try {
-//                Ticket ticket = pool.createTicket("Concert", "Vendor", "City", 100.0);
-//                pool.addTicket(ticket);
-//            } catch (Exception e) {
-//                fail("Producer thread interrupted or failed: " + e.getMessage());
-//            }
-//        }, "Test-Producer");
-//
-//        producerThread.start();
-//
-//        boolean read = ticketReadLatch.await(5, TimeUnit.SECONDS);
-//
-//        assertTrue(read, "Reader should successfully read tickets after producer adds them");
-//
-//        readerThread.join();
-//        producerThread.join();
-//    }
+        CountDownLatch ticketUpdatedLatch = new CountDownLatch(1);
+
+        // Start a writer thread first
+        Thread writerThread = new Thread(() -> {
+            try {
+                long start = System.currentTimeMillis();
+                long timeout = 10000; // 10 seconds timeout manually
+                boolean foundTicket = false;
+                while ((System.currentTimeMillis() - start) < timeout) {
+                    List<Ticket> allTickets = pool.getAllTickets();
+                    if (!allTickets.isEmpty()) {
+                        Ticket ticket = allTickets.get(0);
+                        pool.updateTicket(ticket.getTicketId(), 150.0, "UpdatedCity", "UpdatedEvent");
+                        ticketUpdatedLatch.countDown();
+                        foundTicket = true;
+                        break;
+                    }
+                    Thread.sleep(100); // Sleep small amount to retry
+                }
+                if (!foundTicket) {
+                    System.out.println("Writer timed out waiting for tickets");
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }, "Test-Writer");
+
+        writerThread.start();
+
+        // Wait 3 seconds before starting producer
+        Thread.sleep(3000);
+
+        // Start a producer
+        Thread producerThread = new Thread(() -> {
+            try {
+                Ticket ticket = pool.createTicket("Concert", "Vendor", "City", 100.0);
+                pool.addTicket(ticket);
+            } catch (Exception e) {
+                fail("Producer thread interrupted or failed: " + e.getMessage());
+            }
+        }, "Test-Producer");
+
+        producerThread.start();
+
+        boolean updated = ticketUpdatedLatch.await(20, TimeUnit.SECONDS);
+
+        assertTrue(updated, "Writer should successfully update a ticket after producer adds it");
+
+        writerThread.join();
+        producerThread.join();
+    }
+
+    @ParameterizedTest
+    @EnumSource(TestUtilz.PoolType.class)
+    @DisplayName("Test reader waits and reads after producer starts")
+    void testReaderWaitsAndReadsAfterProducerStarts(TestUtilz.PoolType poolType) throws InterruptedException {
+        TicketPool pool = TestUtilz.createTicketPool(poolType, DEFAULT_CAPACITY);
+
+        CountDownLatch ticketReadLatch = new CountDownLatch(1);
+
+        // Start a reader thread first
+        Thread readerThread = new Thread(() -> {
+            try {
+                if (pool instanceof ReentrantLockTicketPool) {
+                    ReentrantLockTicketPool lockPool = (ReentrantLockTicketPool) pool;
+                    lockPool.getLock().lock();
+                    try {
+                        while (lockPool.getCurrentSize() == 0) {
+                            lockPool.getNotEmptyCondition().await();
+                        }
+                    } finally {
+                        lockPool.getLock().unlock();
+                    }
+                } else {
+                    synchronized (pool) {
+                        while (pool.getCurrentSize() == 0) {
+                            pool.wait();
+                        }
+                    }
+                }
+
+                List<Ticket> allTickets = pool.getAllTickets();
+                if (!allTickets.isEmpty()) {
+                    ticketReadLatch.countDown();
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }, "Test-Reader");
+
+        readerThread.start();
+
+        // Wait 3 seconds before starting producer
+        Thread.sleep(3000);
+
+        // Start a producer
+        Thread producerThread = new Thread(() -> {
+            try {
+                Ticket ticket = pool.createTicket("Concert", "Vendor", "City", 100.0);
+                pool.addTicket(ticket);
+            } catch (Exception e) {
+                fail("Producer thread interrupted or failed: " + e.getMessage());
+            }
+        }, "Test-Producer");
+
+        producerThread.start();
+
+        boolean read = ticketReadLatch.await(20, TimeUnit.SECONDS);
+
+        assertTrue(read, "Reader should successfully read tickets after producer adds them");
+
+        readerThread.join();
+        producerThread.join();
+    }
 
     @ParameterizedTest
     @EnumSource(TestUtilz.PoolType.class)

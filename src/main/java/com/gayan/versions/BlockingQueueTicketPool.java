@@ -32,7 +32,11 @@ public class BlockingQueueTicketPool implements TicketPool {
     public boolean addTicket(Ticket ticket) {
         try {
             boolean success = tickets.offer(ticket, TIME_OUT, TimeUnit.MILLISECONDS);
-            if (!success) {
+            if (success) {
+                synchronized (this) {
+                    notifyAll(); // 🧠 Important: Wake up manual waiters (not BlockingQueue internals)
+                }
+            } else {
                 System.out.println(Thread.currentThread().getName() + " could not add ticket - pool full after waiting.");
             }
             return success;
@@ -42,6 +46,21 @@ public class BlockingQueueTicketPool implements TicketPool {
             return false;
         }
     }
+
+//    @Override
+//    public boolean addTicket(Ticket ticket) {
+//        try {
+//            boolean success = tickets.offer(ticket, TIME_OUT, TimeUnit.MILLISECONDS);
+//            if (!success) {
+//                System.out.println(Thread.currentThread().getName() + " could not add ticket - pool full after waiting.");
+//            }
+//            return success;
+//        } catch (InterruptedException e) {
+//            Thread.currentThread().interrupt();
+//            System.out.println(Thread.currentThread().getName() + " was interrupted while adding ticket.");
+//            return false;
+//        }
+//    }
 
 //    @Override
 //    public void addTicket(Ticket ticket) {

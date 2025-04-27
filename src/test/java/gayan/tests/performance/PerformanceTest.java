@@ -139,10 +139,21 @@ public class PerformanceTest extends BaseTestConfig {
                     long start = System.nanoTime();
 
                     for (int j = 0; j < operationsPerThread; j++) {
-                        Optional<?> ticket = pool.purchaseTicket();
-                        if (!ticket.isPresent()) {
-                            // Wait briefly if no ticket is available
-                            Thread.sleep(1);
+                        try {
+                            Optional<?> ticket = pool.purchaseTicket();
+                            if (!ticket.isPresent()) {
+                                // Wait briefly if no ticket is available
+                                try {
+                                    Thread.sleep(1);
+                                } catch (InterruptedException ie) {
+                                    Thread.currentThread().interrupt(); // Preserve interrupt status
+                                    System.out.println(Thread.currentThread().getName() + " was interrupted during purchase.");
+                                    break; // Exit the loop when interrupted
+                                }
+                            }
+                        } catch (Exception e) {
+                            System.out.println(Thread.currentThread().getName() + " encountered exception: " + e.getMessage());
+                            break;
                         }
                     }
 
@@ -163,7 +174,14 @@ public class PerformanceTest extends BaseTestConfig {
         boolean completed = endLatch.await(30, TimeUnit.SECONDS);
         long totalEnd = System.nanoTime();
 
-        executor.shutdownNow();
+        // First attempt graceful shutdown
+        executor.shutdown();
+
+        // Wait a reasonable time for tasks to complete
+        if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+            // If tasks don't complete in time, force shutdown
+            executor.shutdownNow();
+        }
 
         // If not all threads completed within timeout, return the elapsed time
         return completed ? TimeUnit.NANOSECONDS.toMillis(totalEnd - totalStart) : 30000;

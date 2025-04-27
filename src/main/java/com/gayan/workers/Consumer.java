@@ -41,36 +41,59 @@ public class Consumer implements Runnable{
 
     @Override
     public void run() {
-        int retryCount = 0;
-        final int maxEmptyTries = 3;
-
-        while(running && counter < purchaseLimit) {
-            try{
-
-                Optional<Ticket> optionalTicket = ticketPool.purchaseTicket();
-                if (optionalTicket.isEmpty()) {
-                    retryCount++;
-                    if(retryCount >= maxEmptyTries) {
-                        retryCount = 0;
-                        running = false;
-                    }else{
-                        Thread.sleep(500);
+        while (running && counter < purchaseLimit) {
+            try {
+                Optional<Ticket> optionalTicket;
+                synchronized (ticketPool) {
+                    while ((optionalTicket = ticketPool.purchaseTicket()).isEmpty()) {
+                        ticketPool.wait();  // 💤 wait until Producer notifies
                     }
-                     // gracefully stop
                 }
 
                 optionalTicket.ifPresent(this::handleTicket);
-
                 Thread.sleep(purchaseRateAtMillis);
-            }catch (InterruptedException e){
+
+            } catch (InterruptedException e) {
                 System.out.println(Thread.currentThread().getName() + " was interrupted.");
                 Thread.currentThread().interrupt();
                 break;
             }
         }
-        //System.out.println(Thread.currentThread().getName() + " finished purchasing tickets.");
         printConsumerSummary();
     }
+
+//    @Override
+//    public void run() {
+//        int retryCount = 0;
+//        final int maxEmptyTries = 3;
+//
+//        while(running && counter < purchaseLimit) {
+//            try{
+//
+//                Optional<Ticket> optionalTicket = ticketPool.purchaseTicket();
+//                if (optionalTicket.isEmpty()) {
+//                    retryCount++;
+//                    if(retryCount >= maxEmptyTries) {
+//                        retryCount = 0;
+//                        running = false;
+//                    }else{
+//                        Thread.sleep(500);
+//                    }
+//                     // gracefully stop
+//                }
+//
+//                optionalTicket.ifPresent(this::handleTicket);
+//
+//                Thread.sleep(purchaseRateAtMillis);
+//            }catch (InterruptedException e){
+//                System.out.println(Thread.currentThread().getName() + " was interrupted.");
+//                Thread.currentThread().interrupt();
+//                break;
+//            }
+//        }
+//        //System.out.println(Thread.currentThread().getName() + " finished purchasing tickets.");
+//        printConsumerSummary();
+//    }
 
     private void handleTicket(Ticket ticket) {
         try{

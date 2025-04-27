@@ -16,7 +16,7 @@ public class ReentrantLockTicketPool implements TicketPool {
     private final Queue<Ticket> tickets;
     private final int capacity;
     private final AtomicLong ticketIdCounter;
-    private final Lock lock;
+    private final ReentrantLock lock;
     private final Condition notFull;
     private final Condition notEmpty;
 
@@ -59,8 +59,9 @@ public class ReentrantLockTicketPool implements TicketPool {
             }
 
             tickets.offer(ticket);
+            notEmpty.signalAll();
             added = true;
-            notEmpty.signalAll(); // wake up consumers waiting for tickets
+             // wake up consumers waiting for tickets
 
         } finally {
             lock.unlock();
@@ -238,14 +239,22 @@ public class ReentrantLockTicketPool implements TicketPool {
     public Optional<Ticket> getRandomAvailableTicket() {
         lock.lock();
         try {
-            while (true) {
+            long startTime = System.currentTimeMillis();
+            long remainingTime = TIME_OUT;
+
+            while (remainingTime > 0) {
                 List<Ticket> availableTickets = getAvailableTickets();
                 if (!availableTickets.isEmpty()) {
                     int randomIndex = new Random().nextInt(availableTickets.size());
                     return Optional.of(availableTickets.get(randomIndex));
                 }
-                notEmpty.await();
+                if (!notEmpty.await(remainingTime, TimeUnit.MILLISECONDS)) {
+                    return Optional.empty(); // Timeout occurred
+                }
+                long elapsed = System.currentTimeMillis() - startTime;
+                remainingTime = TIME_OUT - elapsed;
             }
+            return Optional.empty();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return Optional.empty();
@@ -253,6 +262,26 @@ public class ReentrantLockTicketPool implements TicketPool {
             lock.unlock();
         }
     }
+
+//    @Override
+//    public Optional<Ticket> getRandomAvailableTicket() {
+//        lock.lock();
+//        try {
+//            while (true) {
+//                List<Ticket> availableTickets = getAvailableTickets();
+//                if (!availableTickets.isEmpty()) {
+//                    int randomIndex = new Random().nextInt(availableTickets.size());
+//                    return Optional.of(availableTickets.get(randomIndex));
+//                }
+//                notEmpty.await();
+//            }
+//        } catch (InterruptedException e) {
+//            Thread.currentThread().interrupt();
+//            return Optional.empty();
+//        } finally {
+//            lock.unlock();
+//        }
+//    }
 
     @Override
     public void updateTicket(long ticketId, double newPrice, String newLocation, String newEventName) {
@@ -269,5 +298,13 @@ public class ReentrantLockTicketPool implements TicketPool {
         } finally {
             lock.unlock();
         }
+    }
+
+    public ReentrantLock getLock() {
+        return lock;
+    }
+
+    public Condition getNotEmptyCondition() {
+        return notEmpty;
     }
 }

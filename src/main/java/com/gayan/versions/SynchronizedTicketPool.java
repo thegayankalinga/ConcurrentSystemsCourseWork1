@@ -5,11 +5,12 @@ import com.gayan.entities.TicketPool;
 
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class SynchronizedTicketPool implements TicketPool {
 
-    private final int TIME_OUT = 5000;
+    private final int TIME_OUT = 10000;
     //Shared Resource
     private final Queue<Ticket> tickets;
     //private Queue<Ticket> availableTickets;
@@ -31,33 +32,52 @@ public class SynchronizedTicketPool implements TicketPool {
     }
 
     @Override
-    public synchronized boolean addTicket(Ticket ticket) {
-        long startTime = System.currentTimeMillis();
-
-        while ((tickets.size() + soldTickets.size()) >= capacity) {
-            long elapsed = System.currentTimeMillis() - startTime;
-            long waitTime = TIME_OUT - elapsed;
-
-            if (waitTime <= 0) {
-                // Waited too long, fail
-                System.out.println(Thread.currentThread().getName() + " waited too long to add ticket. Exiting...");
-                return false;
+    public boolean addTicket(Ticket ticket) {
+        try {
+            boolean success = tickets.offer(ticket);
+            if (success) {
+                synchronized (this) {
+                    notifyAll(); // 👈 Wake up any waiting Readers
+                }
+            } else {
+                System.out.println(Thread.currentThread().getName() + " could not add ticket - pool full after waiting.");
             }
-
-            try {
-                wait(waitTime);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                return false;
-            }
+            return success;
+        } catch (Exception e) {
+            Thread.currentThread().interrupt();
+            System.out.println(Thread.currentThread().getName() + " was interrupted while adding ticket.");
+            return false;
         }
-
-        // Now we have space
-        tickets.offer(ticket);
-//        refreshAvailableTicket();
-        notifyAll();
-        return true;
     }
+
+//    @Override
+//    public synchronized boolean addTicket(Ticket ticket) {
+//        long startTime = System.currentTimeMillis();
+//
+//        while ((tickets.size() + soldTickets.size()) >= capacity) {
+//            long elapsed = System.currentTimeMillis() - startTime;
+//            long waitTime = TIME_OUT - elapsed;
+//
+//            if (waitTime <= 0) {
+//                // Waited too long, fail
+//                System.out.println(Thread.currentThread().getName() + " waited too long to add ticket. Exiting...");
+//                return false;
+//            }
+//
+//            try {
+//                wait(waitTime);
+//            } catch (InterruptedException e) {
+//                Thread.currentThread().interrupt();
+//                return false;
+//            }
+//        }
+//
+//        // Now we have space
+//        tickets.offer(ticket);
+////        refreshAvailableTicket();
+//        notifyAll();
+//        return true;
+//    }
 
 //    @Override
 //    public synchronized boolean addTicket(Ticket ticket) {
@@ -104,7 +124,10 @@ public class SynchronizedTicketPool implements TicketPool {
     //Get all the available tickets if required
     public List<Ticket> getAvailableTickets() {
         return new ArrayList<>(tickets);
+
     }
+
+
 
     @Override
     public synchronized Optional<Ticket> getRandomAvailableTicket() {
@@ -132,13 +155,21 @@ public class SynchronizedTicketPool implements TicketPool {
         long totalTimeout = TIME_OUT;
 
         while (System.currentTimeMillis() - startTime < totalTimeout) {
-            if (!tickets.isEmpty()) {
-                Ticket ticket = tickets.poll(); // remove and return the first unsold ticket
+            Ticket ticket = tickets.poll();
+            if(ticket != null) {
                 ticket.setSold(true);
-                this.soldTickets.offer(ticket); // move to available/sold queue
+                this.soldTickets.offer(ticket);
                 notifyAll();
                 return Optional.of(ticket);
             }
+
+//            if (!tickets.isEmpty()) {
+//                Ticket ticket = tickets.poll(); // remove and return the first unsold ticket
+//                ticket.setSold(true);
+//                this.soldTickets.offer(ticket); // move to available/sold queue
+//                notifyAll();
+//                return Optional.of(ticket);
+//            }
 
             // Calculate remaining timeout
             long elapsed = System.currentTimeMillis() - startTime;
@@ -150,7 +181,7 @@ public class SynchronizedTicketPool implements TicketPool {
 
             // No ticket found, wait
             try {
-                wait(Math.min(remainingTime, 500));
+                wait(remainingTime);
             } catch (InterruptedException e) {
                 System.out.println(Thread.currentThread().getName() + " was interrupted during purchase.");
                 Thread.currentThread().interrupt();

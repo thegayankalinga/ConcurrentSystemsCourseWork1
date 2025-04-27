@@ -16,25 +16,50 @@ public class Reader implements Runnable{
         this.maxReadAttempts = maxReadAttempts;
     }
 
-
     @Override
     public void run() {
         while (running && counter < maxReadAttempts) {
-            try{
-                // Read the ticket pool status
-                ticketPool.printTicketPoolStatus();
+            try {
+                synchronized (ticketPool) {
+                    // If pool is empty, wait until producer adds and notifies
+                    while (ticketPool.getCurrentSize() == 0) {
+                        ticketPool.wait(); // 💤 wait until Producer notifies
+                    }
+                }
+
+                // Now we are guaranteed pool has tickets
+
                 counter++;
 
-                // Sleep for configured read rate
                 Thread.sleep(readRateAtMillis);
 
-            }catch (InterruptedException e) {
+            } catch (InterruptedException e) {
                 System.out.println(Thread.currentThread().getName() + " was interrupted during reading.");
                 Thread.currentThread().interrupt();
                 break;
             }
         }
+        ticketPool.printTicketPoolStatus();
     }
+
+//    @Override
+//    public void run() {
+//        while (running && counter < maxReadAttempts) {
+//            try{
+//                // Read the ticket pool status
+//                ticketPool.printTicketPoolStatus();
+//                counter++;
+//
+//                // Sleep for configured read rate
+//                Thread.sleep(readRateAtMillis);
+//
+//            }catch (InterruptedException e) {
+//                System.out.println(Thread.currentThread().getName() + " was interrupted during reading.");
+//                Thread.currentThread().interrupt();
+//                break;
+//            }
+//        }
+//    }
 
     // Allow dynamic stop
     public void stop() {

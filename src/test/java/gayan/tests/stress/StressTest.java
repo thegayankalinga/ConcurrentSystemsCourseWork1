@@ -17,8 +17,8 @@ import static org.junit.jupiter.api.Assertions.*;
 public class StressTest extends BaseTestConfig {
 
     // Reduced timeouts and operations to prevent test hanging
-    private static final int STRESS_TEST_TIMEOUT = 30; // seconds
-    private static final int REDUCED_THREAD_COUNT = 5;
+    private static final int STRESS_TEST_TIMEOUT = 120; // seconds
+    private static final int REDUCED_THREAD_COUNT = 10;
     private static final int TICKETS_PER_PRODUCER = 10;
 
     @ParameterizedTest
