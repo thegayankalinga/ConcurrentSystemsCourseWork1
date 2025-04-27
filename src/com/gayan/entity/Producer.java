@@ -12,6 +12,7 @@ public class Producer implements Runnable {
     private final TicketPool ticketPool;
     private final int creationRateAtMillis; //configuration
     private final int maxNoOfTickets; //configuration
+
     private volatile boolean running = true; //to stop the producer dynamically
 
     //Ticket Information
