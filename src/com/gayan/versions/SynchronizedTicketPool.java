@@ -1,7 +1,7 @@
 package com.gayan.versions;
 
-import com.gayan.entity.Ticket;
-import com.gayan.entity.TicketPool;
+import com.gayan.entities.Ticket;
+import com.gayan.entities.TicketPool;
 
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
@@ -27,7 +27,7 @@ public class SynchronizedTicketPool implements TicketPool {
     //Add Ticket by Writers & Producers
     @Override
     public synchronized void addTicket(Ticket ticket) {
-        while(tickets.size() == capacity) {
+        while(tickets.size() >= capacity) {
             try{
                 wait();
             }catch(InterruptedException e){

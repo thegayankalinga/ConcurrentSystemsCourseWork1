@@ -1,4 +1,7 @@
-package com.gayan.entity;
+package com.gayan.workers;
+
+import com.gayan.entities.Ticket;
+import com.gayan.entities.TicketPool;
 
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -13,24 +16,26 @@ public class Consumer implements Runnable{
     private final TicketPool ticketPool;
     private final int purchaseLimit; //configuration
     private final int purchaseRateAtMillis; //Rate at which they can buy configuration
-
+    private final String consumerName;
     //This is created to mainly simulate the real world allowing to do stress testing
     private static final ThreadLocalRandom random = ThreadLocalRandom.current();
     private final boolean simulateCancel; //configuration
 
     private volatile boolean running = true; //Dynamically remove the consumer
 
-    public Consumer(TicketPool ticketPool, int purchaseRateAtMillis, int purchaseLimit) {
+    public Consumer(TicketPool ticketPool, int purchaseRateAtMillis, int purchaseLimit, String consumerName) {
         this.ticketPool = ticketPool;
         this.purchaseRateAtMillis = purchaseRateAtMillis;
         this.purchaseLimit = purchaseLimit;
+        this.consumerName = consumerName;
         this.simulateCancel = false;
     }
 
-    public Consumer(TicketPool ticketPool, int purchaseLimit, int purchaseRateAtMillis, boolean simulateCancel) {
+    public Consumer(TicketPool ticketPool, int purchaseLimit, int purchaseRateAtMillis, String consumerName, boolean simulateCancel) {
         this.ticketPool = ticketPool;
         this.purchaseLimit = purchaseLimit;
         this.purchaseRateAtMillis = purchaseRateAtMillis;
+        this.consumerName = consumerName;
         this.simulateCancel = simulateCancel;
     }
 

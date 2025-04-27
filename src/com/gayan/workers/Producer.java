@@ -1,4 +1,7 @@
-package com.gayan.entity;
+package com.gayan.workers;
+
+import com.gayan.entities.Ticket;
+import com.gayan.entities.TicketPool;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -21,7 +24,14 @@ public class Producer implements Runnable {
     private final String location;
     private final double price;
 
-    public Producer(TicketPool ticketPool, int creationRateAtMillis, int maxNoOfTickets, String eventName, String vendorName, String location, double price) {
+    public Producer(
+            TicketPool ticketPool,
+            int creationRateAtMillis,
+            int maxNoOfTickets,
+            String eventName,
+            String vendorName,
+            String location,
+            double price) {
         this.ticketPool = ticketPool;
         this.creationRateAtMillis = creationRateAtMillis;
         this.maxNoOfTickets = maxNoOfTickets;
@@ -33,13 +43,19 @@ public class Producer implements Runnable {
 
     @Override
     public void run() {
-
+        if (ticketCounter >= maxNoOfTickets){
+            System.out.println("Queue is full, cannot add tickets waiting....");
+        }
         while(running && ticketCounter < maxNoOfTickets) {
             try{
                 Ticket ticket = ticketPool.createTicket(eventName, vendorName, location, price);
                 ticketPool.addTicket(ticket);
                 ticketCounter++;
                 vendorTicketCount.computeIfAbsent(vendorName, k -> new AtomicInteger(0)).incrementAndGet();
+
+                System.out.println(Thread.currentThread().getName() +
+                        " Added a ticket: " + ticket.getTicketId());
+
                 Thread.sleep(creationRateAtMillis);
             }catch (InterruptedException e){
                 System.out.println(Thread.currentThread().getName() + " interrupted.");

@@ -1,6 +1,8 @@
-package com.gayan.entity;
+package com.gayan.workers;
 
-import java.util.List;
+import com.gayan.entities.Ticket;
+import com.gayan.entities.TicketPool;
+
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 

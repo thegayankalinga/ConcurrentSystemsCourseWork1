@@ -1,4 +1,4 @@
-package com.gayan.entity;
+package com.gayan.entities;
 
 import java.util.List;
 import java.util.Optional;

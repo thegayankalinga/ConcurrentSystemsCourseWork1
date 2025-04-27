@@ -1,8 +1,8 @@
-package com.gayan.entity;
+package com.gayan.entities;
 
 public class Ticket {
 
-    private long ticketId;
+    private final long ticketId;
     private String eventName;
     private String vendorName;
     private String location;
@@ -36,9 +36,9 @@ public class Ticket {
         this.sold = sold;
     }
 
-    public void setTicketId(long ticketId) {
-        this.ticketId = ticketId;
-    }
+//    public void setTicketId(long ticketId) {
+//        this.ticketId = ticketId;
+//    }
 
     public String getEventName() {
         return eventName;
