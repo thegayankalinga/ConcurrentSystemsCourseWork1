@@ -27,8 +27,6 @@ public class Reader implements Runnable{
                     }
                 }
 
-                // Now we are guaranteed pool has tickets
-
                 counter++;
 
                 Thread.sleep(readRateAtMillis);
@@ -41,25 +39,6 @@ public class Reader implements Runnable{
         }
         ticketPool.printTicketPoolStatus();
     }
-
-//    @Override
-//    public void run() {
-//        while (running && counter < maxReadAttempts) {
-//            try{
-//                // Read the ticket pool status
-//                ticketPool.printTicketPoolStatus();
-//                counter++;
-//
-//                // Sleep for configured read rate
-//                Thread.sleep(readRateAtMillis);
-//
-//            }catch (InterruptedException e) {
-//                System.out.println(Thread.currentThread().getName() + " was interrupted during reading.");
-//                Thread.currentThread().interrupt();
-//                break;
-//            }
-//        }
-//    }
 
     // Allow dynamic stop
     public void stop() {

@@ -36,10 +36,6 @@ public class Ticket {
         this.sold = sold;
     }
 
-//    public void setTicketId(long ticketId) {
-//        this.ticketId = ticketId;
-//    }
-
     public String getEventName() {
         return eventName;
     }

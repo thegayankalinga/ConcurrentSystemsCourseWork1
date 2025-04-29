@@ -70,22 +70,6 @@ public class ReentrantLockTicketPool implements TicketPool {
         return added;
     }
 
-//    @Override
-//    public void addTicket(Ticket ticket) {
-//        lock.lock();
-//        try {
-//            while (tickets.size() == capacity) {
-//                notFull.await();
-//            }
-//            tickets.offer(ticket);
-//            notEmpty.signalAll();
-//        } catch (InterruptedException e) {
-//            Thread.currentThread().interrupt();
-//            throw new RuntimeException(e);
-//        } finally {
-//            lock.unlock();
-//        }
-//    }
 
     @Override
     public Optional<Ticket> purchaseTicket() {

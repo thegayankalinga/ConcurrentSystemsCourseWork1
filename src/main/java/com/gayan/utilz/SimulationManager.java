@@ -37,8 +37,6 @@ public class SimulationManager {
     private final List<Thread> readerThreads = new ArrayList<>();
     private final List<Reader> readers = new ArrayList<>();
 
-
-
     public void startSimulation(){
 
         Scanner scanner = new Scanner(System.in);
@@ -77,8 +75,10 @@ public class SimulationManager {
                 System.exit(1);
             }
         }
+
         startDeadlockMonitor();
         boolean running = true;
+
         while(running){
             printMenu();
             int menuChoice = getValidatedIntegerInput(scanner,
@@ -571,8 +571,6 @@ public class SimulationManager {
             System.out.println(TerminalColorConstant.YELLOW + "No producers to remove." + TerminalColorConstant.RESET);
         }
     }
-
-
 
     private void removeConsumer() {
         if (!consumers.isEmpty()) {

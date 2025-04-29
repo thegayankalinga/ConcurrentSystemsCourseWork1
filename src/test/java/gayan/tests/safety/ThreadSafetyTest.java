@@ -147,76 +147,7 @@ public class ThreadSafetyTest extends BaseTestConfig {
         assertEquals(0, pool.getAvailableTicketCount(), "No available tickets should remain");
     }
 
-//    @ParameterizedTest
-//    @EnumSource(TestUtilz.PoolType.class)
-//    @DisplayName("Test concurrent producers and consumers")
-//    void testProducerConsumerPattern(TestUtilz.PoolType poolType) throws InterruptedException {
-//        // Arrange
-//        TicketPool pool = TestUtilz.createTicketPool(poolType, DEFAULT_CAPACITY);
-//        AtomicInteger producedCount = new AtomicInteger(0);
-//        AtomicInteger consumedCount = new AtomicInteger(0);
-//
-//        int producerCount = 5;
-//        int consumerCount = 10;
-//        int ticketsPerProducer = 10;
-//
-//        CountDownLatch startLatch = new CountDownLatch(1);
-//
-//        // Start producers
-//        for (int i = 0; i < producerCount; i++) {
-//            int producerId = i;
-//            new Thread(() -> {
-//                try {
-//                    startLatch.await(); // Wait for all threads to be ready
-//                    for (int j = 0; j < ticketsPerProducer; j++) {
-//                        Ticket ticket = pool.createTicket(
-//                                "Event-" + producerId + "-" + j,
-//                                "Producer-" + producerId,
-//                                "Location-" + j,
-//                                100.0 + j
-//                        );
-//                        pool.addTicket(ticket);
-//                        producedCount.incrementAndGet();
-//                        Thread.sleep(20); // Small delay to increase chances of interleaving
-//                    }
-//                } catch (InterruptedException e) {
-//                    Thread.currentThread().interrupt();
-//                }
-//            }).start();
-//        }
-//
-//        // Start consumers
-//        for (int i = 0; i < consumerCount; i++) {
-//            new Thread(() -> {
-//                try {
-//                    startLatch.await(); // Wait for all threads to be ready
-//                    while (consumedCount.get() < producerCount * ticketsPerProducer) {
-//                        Optional<Ticket> ticket = pool.purchaseTicket();
-//                        if (ticket.isPresent()) {
-//                            consumedCount.incrementAndGet();
-//                            Thread.sleep(2); // Small delay to increase chances of interleaving
-//                        }
-//                    }
-//                } catch (InterruptedException e) {
-//                    Thread.currentThread().interrupt();
-//                }
-//            }).start();
-//        }
-//
-//        // Start all threads at once
-//        startLatch.countDown();
-//
-//        // Wait for completion (with timeout)
-//        long timeout = System.currentTimeMillis() + 20000; // 10 second timeout
-//        while (consumedCount.get() < producerCount * ticketsPerProducer && System.currentTimeMillis() < timeout) {
-//            Thread.sleep(100);
-//        }
-//
-//        // Assert
-//        assertEquals(producerCount * ticketsPerProducer, producedCount.get(), "All tickets should be produced");
-//        assertEquals(producerCount * ticketsPerProducer, consumedCount.get(), "All tickets should be consumed");
-//        assertEquals(0, pool.getAvailableTicketCount(), "No tickets should remain available");
-//    }
+
 
     @ParameterizedTest
     @EnumSource(TestUtilz.PoolType.class)

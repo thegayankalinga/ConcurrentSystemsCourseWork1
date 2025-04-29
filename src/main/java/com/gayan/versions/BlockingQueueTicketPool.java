@@ -47,31 +47,6 @@ public class BlockingQueueTicketPool implements TicketPool {
         }
     }
 
-//    @Override
-//    public boolean addTicket(Ticket ticket) {
-//        try {
-//            boolean success = tickets.offer(ticket, TIME_OUT, TimeUnit.MILLISECONDS);
-//            if (!success) {
-//                System.out.println(Thread.currentThread().getName() + " could not add ticket - pool full after waiting.");
-//            }
-//            return success;
-//        } catch (InterruptedException e) {
-//            Thread.currentThread().interrupt();
-//            System.out.println(Thread.currentThread().getName() + " was interrupted while adding ticket.");
-//            return false;
-//        }
-//    }
-
-//    @Override
-//    public void addTicket(Ticket ticket) {
-//        try {
-//            tickets.put(ticket); // blocks if full
-//        } catch (InterruptedException e) {
-//            Thread.currentThread().interrupt();
-//            throw new RuntimeException("Thread interrupted while adding ticket", e);
-//        }
-//    }
-
     @Override
     public Optional<Ticket> purchaseTicket() {
 

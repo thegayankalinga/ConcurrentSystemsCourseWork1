@@ -20,8 +20,6 @@ public class SynchronizedTicketPool implements TicketPool {
 
     private volatile boolean poolClosed = false;
 
-
-
     //Constructor
     public SynchronizedTicketPool(int capacity) {
         this.capacity = capacity;
@@ -50,84 +48,11 @@ public class SynchronizedTicketPool implements TicketPool {
         }
     }
 
-//    @Override
-//    public synchronized boolean addTicket(Ticket ticket) {
-//        long startTime = System.currentTimeMillis();
-//
-//        while ((tickets.size() + soldTickets.size()) >= capacity) {
-//            long elapsed = System.currentTimeMillis() - startTime;
-//            long waitTime = TIME_OUT - elapsed;
-//
-//            if (waitTime <= 0) {
-//                // Waited too long, fail
-//                System.out.println(Thread.currentThread().getName() + " waited too long to add ticket. Exiting...");
-//                return false;
-//            }
-//
-//            try {
-//                wait(waitTime);
-//            } catch (InterruptedException e) {
-//                Thread.currentThread().interrupt();
-//                return false;
-//            }
-//        }
-//
-//        // Now we have space
-//        tickets.offer(ticket);
-////        refreshAvailableTicket();
-//        notifyAll();
-//        return true;
-//    }
-
-//    @Override
-//    public synchronized boolean addTicket(Ticket ticket) {
-//        if ((tickets.size() + soldTickets.size()) >= capacity) {
-//            return false; // Pool full -> signal producer to stop
-//        }
-//        tickets.offer(ticket);
-//        refreshAvailableTicket();
-//        notifyAll();
-//        return true;
-//    }
-    //Add Ticket by Writers & Producers
-//    @Override
-//    public synchronized void addTicket(Ticket ticket) {
-//        long startTime = System.currentTimeMillis();
-//
-//        while(tickets.size() >= capacity) {
-//            long elapsed = System.currentTimeMillis() - startTime;
-////            if (tickets.size() >= capacity) {
-////                System.out.println(Thread.currentThread().getName() + " could not add ticket - pool full after waiting.");
-////                return;
-////            }
-//
-//            try{
-//                wait(TIME_OUT - elapsed);
-//            }catch(InterruptedException e){
-//                System.out.println(e.getMessage());
-//                throw new RuntimeException(e);
-//            }
-//        }
-//        tickets.offer(ticket);
-//        refreshAvailableTicket();
-//
-//        notifyAll();
-//    }
-
-    //Update Available Tickets List after purchase and Add (optional)
-//    private void refreshAvailableTicket(){
-//        availableTickets = tickets.stream()
-//                .filter(ticket -> !ticket.isSold())
-//                .collect(LinkedList::new, LinkedList::add, LinkedList::addAll);
-//    }
-
     //Get all the available tickets if required
     public List<Ticket> getAvailableTickets() {
         return new ArrayList<>(tickets);
 
     }
-
-
 
     @Override
     public synchronized Optional<Ticket> getRandomAvailableTicket() {
@@ -163,14 +88,6 @@ public class SynchronizedTicketPool implements TicketPool {
                 return Optional.of(ticket);
             }
 
-//            if (!tickets.isEmpty()) {
-//                Ticket ticket = tickets.poll(); // remove and return the first unsold ticket
-//                ticket.setSold(true);
-//                this.soldTickets.offer(ticket); // move to available/sold queue
-//                notifyAll();
-//                return Optional.of(ticket);
-//            }
-
             // Calculate remaining timeout
             long elapsed = System.currentTimeMillis() - startTime;
             long remainingTime = totalTimeout - elapsed;
@@ -190,65 +107,6 @@ public class SynchronizedTicketPool implements TicketPool {
         }
         return Optional.empty();
     }
-//    //Purchase Tickets by Consumers & Writers
-//    @Override
-//    public synchronized Optional<Ticket> purchaseTicket(){
-//
-//        while (true) {
-//            // Try to find an available (unsold) ticket
-//            Optional<Ticket> optionalTicket = tickets.stream()
-//                    .filter(ticket -> !ticket.isSold())
-//                    .findFirst();
-//
-//            if (optionalTicket.isPresent()) {
-//                Ticket ticket = optionalTicket.get();
-//                tickets.remove(ticket); // Remove from current queue
-//                ticket.setSold(true);
-//                availableTickets.offer(ticket);
-//                notifyAll();
-//                return Optional.of(ticket);
-//            }
-//
-//            // No available ticket found, wait
-//            try {
-//                wait(TIME_OUT);
-//            } catch (InterruptedException e) {
-//                System.out.println(Thread.currentThread().getName() + " was interrupted during purchase.");
-//                Thread.currentThread().interrupt();
-//                return Optional.empty();
-//            }
-//        }
-//
-////        refreshAvailableTicket();
-////        while(availableTickets.isEmpty()) {
-////            try{
-////                wait();
-////            }catch(InterruptedException e){
-////                e.printStackTrace();
-////                return Optional.empty();
-////            }
-////        }
-////        //Mark as sold
-////
-////        Optional<Ticket> optionalTicket = tickets.stream()
-////                .filter(ticket -> !ticket.isSold())
-////                .findFirst();
-////
-////        if (optionalTicket.isPresent()) {
-////            Ticket ticket = optionalTicket.get();
-////            ticket.setSold(true);
-////            notifyAll();
-////            return Optional.of(ticket);
-////        }
-////
-//////        Ticket ticket = tickets.poll();
-//////        if(ticket != null) {
-//////            ticket.setSold(true);
-//////        }
-//////        notifyAll();
-//////
-////        return optionalTicket;
-//    }
 
     @Override
     public synchronized void updateTicket(
@@ -379,40 +237,6 @@ public class SynchronizedTicketPool implements TicketPool {
         System.out.println(BOLD + "╚══════════════════════════════════════════════════════╝" + RESET);
         System.out.println();
     }
-//    @Override
-//    public synchronized void printTicketPoolStatus() {
-//        int total = getAllTicketsCount();
-//        int available = getAvailableTicketCount();
-//        int sold = getSoldTicketCount();
-//        double percentageSold = total > 0 ? (double) sold / total * 100 : 0;
-//
-//        System.out.println("========== TICKET POOL STATISTICS ==========");
-//        System.out.println("Total tickets: " + total + "/" + capacity);
-//        System.out.println("Available tickets: " + available);
-//        System.out.println("Sold tickets: " + sold);
-//        System.out.printf("Percentage sold: %.2f%%\n", percentageSold);
-//
-//        //Print Each Ticket Details if Required
-
-    /// /        if (total > 0) {
-    /// /            System.out.println("\nTicket details:");
-    /// /            System.out.println("-------------------------------------------------");
-    /// /            System.out.printf("%-10s %-20s %-15s %-20s %-10s %-10s\n",
-    /// /                    "ID", "Event", "Vendor", "Location", "Price", "Status");
-    /// /            System.out.println("-------------------------------------------------");
-    /// /
-    /// /            for (Ticket ticket : tickets) {
-    /// /                System.out.printf("%-10d %-20s %-15s %-20s $%-9.2f %s\n",
-    /// /                        ticket.getTicketId(),
-    /// /                        truncate(ticket.getEventName(), 20),
-    /// /                        truncate(ticket.getVendorName(), 15),
-    /// /                        truncate(ticket.getLocation(), 20),
-    /// /                        ticket.getPrice(),
-    /// /                        ticket.isSold() ? "SOLD" : "AVAILABLE");
-    /// /            }
-    /// /        }
-//        System.out.println("==============================================");
-//    }
 
     //Create Ticket
     public synchronized Ticket createTicket(

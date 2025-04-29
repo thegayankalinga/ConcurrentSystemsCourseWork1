@@ -64,9 +64,6 @@ public class Producer implements Runnable {
                 ticketCounter++;
                 vendorTicketCount.computeIfAbsent(vendorName, k -> new AtomicInteger(0)).incrementAndGet();
 
-//                System.out.println(Thread.currentThread().getName() +
-//                        " Added a ticket: " + ticket.getTicketId());
-
                 Thread.sleep(creationRateAtMillis);
             }catch (InterruptedException e){
                 System.out.println(Thread.currentThread().getName() + " interrupted.");
@@ -74,10 +71,7 @@ public class Producer implements Runnable {
                 break; // break the while loop
             }
         }
-//        System.out.println(Thread.currentThread().getName() +
-//                        " finished producing " + ticketCounter +
-//                        " tickets for event: " + eventName +
-//                        " by vendor: " + vendorName);
+
         printVendorTicketSummary();
 
     }
